@@ -1,4 +1,3 @@
-import json
 def node_id(node):
     return id(node)
 
@@ -49,22 +48,17 @@ class Graph:
         for source_id, out_dict in self.__edges.items():
             # if source_id == n_id:
             #     continue
-            # -- do not skip own node - can have node to self
+            # do not skip own node - can have edge to self
             for out_node in out_dict:
                 if out_node == n_id:
                     ret[source_id] = out_dict[out_node]
         return ret
 
-    def express_yourself(self):
-        # print('--------------------------------')
-        print(json.dumps({'nodes': self.__nodes, 'edges': self.__edges}, indent=2))
-        print('--------------------------------')
 
     def inspect_node(self, node):
         n_id = node_id(node)
-        print('Id:')
-        print(n_id)
-        print(node)
+        print('Id: ' + str(n_id))
+        print('Value: ' + str(node))
         print('outgoing edges')
         print(self.get_outgoing_edges(node))
         print('incoming edges')
