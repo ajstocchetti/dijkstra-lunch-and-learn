@@ -26,7 +26,7 @@ let runAlgorithm = (algorithm) => {
     let options = {
       root: '#' + cy.nodes()[0].id(),
       // astar requires target; goal property is ignored for other algorithms
-      goal: '#' + cy.nodes()[Math.round(Math.random() * (cy.nodes().size() - 1))].id()
+      goal: '#' + cy.nodes()[1].id()
     };
     return Promise.resolve(algorithm(options));
   }
@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', function(){
     elements: {
       nodes: [
         { data: { id: 'start', name: 'Andy hungry (and cheap)' } },
+        { data: { id: 'lunch', name: 'Free Lunch!' } },
         { data: { id: 2, name: 'Steal from fridge' } },
         { data: { id: 3, name: 'get caught stealing' } },
         { data: { id: 4, name: 'get fired' } },
@@ -149,8 +150,7 @@ document.addEventListener('DOMContentLoaded', function(){
         { data: { id: 'feb', name: 'Wait for February' } },
         { data: { id: 'march', name: 'Wait for March' } },
         { data: { id: 'bday', name: 'Birthday lunch for month' } },
-        { data: { id: 'lunch', name: 'Free Lunch!' } },
-        { data: { id: 'lla', name: 'Get approval to start L&L' } },
+        { data: { id: 'lla', name: 'Come up with L&L scheme' } },
         { data: { id: 'llp', name: 'Prepare & Schedule' } },
         // { data: { id: 'llr', name: 'Schedule L&L' } },
         { data: { id: 'alex', name: `Intern going away party (have fun in Japan)` } },
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function(){
         { data: { source: 'bday', target: 'lunch', weight: 0 } },
         { data: { source: 'start', target: 'march', weight: 42 } },
         { data: { source: 'march', target: 'bday', weight: 14 } },
-        { data: { source: 'start', target: 'lla', weight: 4 } },
+        { data: { source: 'start', target: 'lla', weight: 8 } },
         { data: { source: 'lla', target: 'llp', weight: 11 } },
         // { data: { source: 'llp', target: 'llr', weight: 0.25 } },
         { data: { source: 'llp', target: 'lunch', weight: 8 } },
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function(){
     spacingFactor: 1.3, // positive spacing factor, larger => more space between nodes (N.B. n/a if causes overlap)
     avoidOverlap: true, // prevents node overlap, may overflow boundingBox if not enough space
     nodeDimensionsIncludeLabels: false, // Excludes the label when calculating node bounding boxes for the layout algorithm
-    roots: 'start', // the roots of the trees
+    roots: '#start', // the roots of the trees
     maximal: true, // whether to shift nodes down their natural BFS depths in order to avoid upwards edges (DAGS only)
     // boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
     // animate: false, // whether to transition the node positions
@@ -197,5 +197,12 @@ document.addEventListener('DOMContentLoaded', function(){
     // stop: undefined, // callback on layoutstop
     // transform: function (node, position ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts
   }).run();
-  applyAlgorithmFromSelect('bfs')
+
+  // applyAlgorithmFromSelect('astar')
+  // cy.elements().bfs.bind(cy.elements())
+    const dijkstra = cy.elements().dijkstra('#start');
+  const pathToC = dijkstra.pathTo( cy.$('#lunch') );
+  const distToC = dijkstra.distanceTo( cy.$('#lunch') );
+  console.log({pathToC, distToC});
+
 });
