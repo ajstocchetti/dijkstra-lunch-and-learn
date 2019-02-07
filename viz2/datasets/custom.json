@@ -1,7 +1,30 @@
 [
   {
     "data": {
-      "id": "0"
-    }
+      "id": "start",
+      "degreeCentrality": 0,
+      "djikstraDistance": 0
+    },
+    "group": "nodes",
+    "removed": false,
+    "selected": false,
+    "selectable": true,
+    "locked": false,
+    "grabbable": true,
+    "classes": ""
+  },
+  {
+    "data": {
+      "id": "lunch",
+      "degreeCentrality": 0,
+      "djikstraDistance": 0
+    },
+    "group": "nodes",
+    "removed": false,
+    "selected": false,
+    "selectable": true,
+    "locked": false,
+    "grabbable": true,
+    "classes": ""
   }
 ]
