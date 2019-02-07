@@ -110,6 +110,24 @@ document.addEventListener('DOMContentLoaded', function(){
           'target-arrow-color': 'red',
           'source-arrow-color': 'red'
         }
+      },
+      {
+        selector: '.consumed',
+        style: {
+          'background-color': 'purple',
+          'line-color': 'purple',
+          'target-arrow-color': 'purple',
+          'source-arrow-color': 'purple'
+        }
+      },
+      {
+        selector: '.candidate',
+        style: {
+          'background-color': 'orange',
+          'line-color': 'orange',
+          'target-arrow-color': 'orange',
+          'source-arrow-color': 'orange'
+        }
       }
     ],
     elements: [
@@ -139,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function(){
         { data: { source: 'march', target: 'bday', weight: 14 } },
         { data: { source: 'start', target: 'lla', weight: 2 } },
         { data: { source: 'lla', target: 'llp', weight: 11 } },
-        { data: { source: 'llp', target: 'lunch', weight: 8 } },
+        { data: { source: 'llp', target: 'lunch', weight: 6 } },
         { data: { source: 'start', target: 'alex', weight: 94 } },
         { data: { source: 'alex', target: 'alexp', weight: 10 } },
         { data: { source: 'alexp', target: 'lunch', weight: 0 } },
@@ -167,7 +185,8 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   function clearMarks() {
-    cy.$().removeClass('highlighted start end');
+    cy.$().removeClass('highlighted candidate consumed');
+    step = dijkstra(cy);
   }
 
   $('#clear').click(clearMarks);
@@ -179,4 +198,71 @@ document.addEventListener('DOMContentLoaded', function(){
     clearMarks();
     applyAlgorithmFromSelect('dfs');
   });
+
+
+  function dijkstra(cy = cy, start = 'start', end = 'lunch') {
+    const nodes = cy.nodes();
+    const edges = cy.edges();
+
+    const V = {
+      start: { d: 0, path: [start]},
+    };
+    const U = new Set();
+    for (let x = 0; x < nodes.length; x++) {
+      const id = nodes[x].id();
+      if (id != start) U.add(id);
+    }
+
+    function moveToConsumed({edge, dgs}) {
+      const tId = edge.target().id();
+      cy.nodes('#'+tId).addClass('consumed');
+      cy.edges('#' + edge.id()).addClass('consumed');
+      // cy.edges('#' + edge.id()).removeClass('candidate');
+      cy.$().removeClass('candidate');
+
+      U.delete(tId);
+      V[tId] = {
+        d: dgs,
+        path: [...V[edge.source().id()].path, tId]
+      };
+      // console.log(V);
+    }
+
+    let min = null;
+
+    function loop() {
+      if (min) {
+        moveToConsumed(min);
+        min = null;
+        return;
+      }
+
+      cy.nodes('#'+start).addClass('consumed');
+      // cy.$().removeClass('candidate');
+
+      if (V[end]) return;
+
+      x = edges.filter(edge => {
+        return V[edge.source().id()] && U.has(edge.target().id());
+      })
+      .map(edge => {
+        const id = edge.id();
+        cy.edges('#' + id).addClass('candidate');
+
+        w = edge._private.data.weight;
+        dgs = w + V[edge.source().id()].d; // dijkstra greedy score
+        return {edge, dgs};
+      });
+
+      min = x[0];
+      for (let z = 1; z < x.length; z++) {
+        if (x[z].dgs < min.dgs) min = x[z];
+      }
+    }
+
+    return loop;
+  }
+
+  var step = dijkstra(cy);
+  $('#step').click(() => step());
 });
