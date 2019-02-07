@@ -27,6 +27,10 @@
         font-size: 1em;
         font-weight: bold;
       }
+      #buttons{
+        position: absolute;
+         z-index: 99999;
+      }
     </style>
 
     <script src="./helper.js"></script>
@@ -37,6 +41,11 @@
     <h1>Dijkstra's Algorithm</h1>
 
     <div id="cy"></div>
+    <div id="buttons">
+      <button id="bfs">BFS</button>
+      <button id="dfs">DFS</button>
+      <button id="clear">Clear</button>
+    </div>
   </body>
 
 </html>

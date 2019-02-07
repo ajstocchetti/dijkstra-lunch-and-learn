@@ -1,8 +1,4 @@
 let applyAlgorithmFromSelect = (name) => Promise.resolve( name )
-  .then(x => {
-    console.log('running', x);
-    return x;
-  })
   .then( getAlgorithm )
   .then( runAlgorithm )
   .then( animateAlgorithm );
@@ -13,6 +9,7 @@ let getAlgorithm = (name) => {
     case 'bfs': return Promise.resolve(cy.elements().bfs.bind(cy.elements()));
     case 'dfs': return Promise.resolve(cy.elements().dfs.bind(cy.elements()));
     case 'astar': return Promise.resolve(cy.elements().aStar.bind(cy.elements()));
+    case 'dijkstra': return Promise.resolve(cy.elements().dijkstra.bind(cy.elements()));
     case 'none': return Promise.resolve(undefined);
     case 'custom': return Promise.resolve(undefined); // replace with algorithm of choice
     default: return Promise.resolve(undefined);
@@ -25,8 +22,9 @@ let runAlgorithm = (algorithm) => {
   } else {
     let options = {
       root: '#' + cy.nodes()[0].id(),
-      // astar requires target; goal property is ignored for other algorithms
-      goal: '#' + cy.nodes()[1].id()
+      goal: '#' + cy.nodes()[1].id(),
+      weight: (edge) => edge.weight,
+      directed: true,
     };
     return Promise.resolve(algorithm(options));
   }
@@ -52,7 +50,6 @@ let animateAlgorithm = (algResults) => {
       let highlightNext = () => {
         if (currentAlgorithm === algResults && i < algResults.path.length) {
           algResults.path[i].addClass('highlighted');
-          console.log('adding class now', i, algResults.path[i]);
           i++;
           setTimeout(highlightNext, 500);
         } else {
@@ -69,11 +66,27 @@ let animateAlgorithm = (algResults) => {
 document.addEventListener('DOMContentLoaded', function(){
   var cy = window.cy = cytoscape({
     container: document.getElementById('cy'),
-    // layout: {
-    //   name: 'grid',
-    //   rows: 2,
-    //   cols: 2
-    // },
+    layout: {
+      name:'breadthfirst',
+      fit: true, // whether to fit the viewport to the graph
+      directed: true, // whether the tree is directed downwards (or edges can point in any direction if false)
+      padding: 20, // padding on fit
+      circle: false, // put depths in concentric circles if true, put depths top down if false
+      grid: false, // whether to create an even grid into which the DAG is placed (circle:false only)
+      spacingFactor: 1.3, // positive spacing factor, larger => more space between nodes (N.B. n/a if causes overlap)
+      avoidOverlap: true, // prevents node overlap, may overflow boundingBox if not enough space
+      nodeDimensionsIncludeLabels: false, // Excludes the label when calculating node bounding boxes for the layout algorithm
+      roots: '#start', // the roots of the trees
+      maximal: true, // whether to shift nodes down their natural BFS depths in order to avoid upwards edges (DAGS only)
+      // boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+      // animate: false, // whether to transition the node positions
+      // animationDuration: 500, // duration of animation in ms if enabled
+      // animationEasing: undefined, // easing of animation if enabled,
+      // animateFilter: function ( node, i ){ return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
+      // ready: undefined, // callback on layoutready
+      // stop: undefined, // callback on layoutstop
+      // transform: function (node, position ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts
+    },
     style: [
       {
         selector: 'node',
@@ -89,120 +102,81 @@ document.addEventListener('DOMContentLoaded', function(){
           label: 'data(weight)'
         }
       },
-      // some style for the extension
       {
-        selector: '.eh-handle',
-        style: {
-          'background-color': 'red',
-          'width': 12,
-          'height': 12,
-          'shape': 'ellipse',
-          'overlay-opacity': 0,
-          'border-width': 12, // makes the handle easier to hit
-          'border-opacity': 0
-        }
-      },
-      {
-        selector: '.eh-hover',
-        style: {
-          'background-color': 'red'
-        }
-      },
-      {
-        selector: '.eh-source',
-        style: {
-          'border-width': 2,
-          'border-color': 'red'
-        }
-      },
-      {
-        selector: '.eh-target',
-        style: {
-          'border-width': 2,
-          'border-color': 'red'
-        }
-      },
-      {
-        selector: '.eh-preview, .eh-ghost-edge',
+        selector: '.highlighted',
         style: {
           'background-color': 'red',
           'line-color': 'red',
           'target-arrow-color': 'red',
           'source-arrow-color': 'red'
         }
-      },
-      {
-        selector: '.eh-ghost-edge.eh-preview-active',
-        style: {
-          'opacity': 0
-        }
       }
     ],
-    elements: {
-      nodes: [
-        { data: { id: 'start', name: 'Andy hungry (and cheap)' } },
-        { data: { id: 'lunch', name: 'Free Lunch!' } },
-        { data: { id: 2, name: 'Steal from fridge' } },
-        { data: { id: 3, name: 'get caught stealing' } },
-        { data: { id: 4, name: 'get fired' } },
-        { data: { id: 'dc', name: 'Donkey Car meeting' } },
-        { data: { id: 'dcm', name: 'Leftovers after Donkey Car' } },
-        { data: { id: 'feb', name: 'Wait for February' } },
-        { data: { id: 'march', name: 'Wait for March' } },
-        { data: { id: 'bday', name: 'Birthday lunch for month' } },
-        { data: { id: 'lla', name: 'Come up with L&L scheme' } },
-        { data: { id: 'llp', name: 'Prepare & Schedule' } },
-        // { data: { id: 'llr', name: 'Schedule L&L' } },
-        { data: { id: 'alex', name: `Intern going away party (have fun in Japan)` } },
-      ],
-      edges: [
+    elements: [
+        { group: 'nodes', data: { id: 'start', name: 'Andy hungry (and cheap)' } },
+        { group: 'nodes', data: { id: 'lunch', name: 'Free Lunch!' } },
+        { group: 'nodes', data: { id: 2, name: 'Steal from fridge' } },
+        { group: 'nodes', data: { id: 3, name: 'get caught stealing' } },
+        { group: 'nodes', data: { id: 4, name: 'get fired' } },
+        { group: 'nodes', data: { id: 'dc', name: 'Donkey Car meeting' } },
+        { group: 'nodes', data: { id: 'dcm', name: 'Leftovers after Donkey Car' } },
+        { group: 'nodes', data: { id: 'feb', name: 'Wait for February' } },
+        { group: 'nodes', data: { id: 'march', name: 'Wait for March' } },
+        { group: 'nodes', data: { id: 'bday', name: 'Birthday lunch for month' } },
+        { group: 'nodes', data: { id: 'lla', name: 'Come up with L&L scheme' } },
+        { group: 'nodes', data: { id: 'llp', name: 'Prepare & Schedule' } },
+        { group: 'nodes', data: { id: 'alex', name: `Alex leaves for Japan` } },
+        { group: 'nodes', data: { id: 'alexp', name: `Alex going away party` } },
         { data: { source: 'start', target: 2, weight: 0.5 } },
         { data: { source: 2, target: 3, weight: 0.25 } },
         { data: { source: 3, target: 4, weight: 0 } },
         { data: { source: 'dc', target: 'dcm', weight: 3 } },
         { data: { source: 'dcm', target: 'lunch', weight: 0 } },
-        { data: { source: 'start', target: 'feb', weight: 14 } },
+        { data: { source: 'start', target: 'feb', weight: 12 } },
         { data: { source: 'feb', target: 'bday', weight: 14 } },
         { data: { source: 'bday', target: 'lunch', weight: 0 } },
-        { data: { source: 'start', target: 'march', weight: 42 } },
+        { data: { source: 'start', target: 'march', weight: 40 } },
         { data: { source: 'march', target: 'bday', weight: 14 } },
-        { data: { source: 'start', target: 'lla', weight: 8 } },
+        { data: { source: 'start', target: 'lla', weight: 2 } },
         { data: { source: 'lla', target: 'llp', weight: 11 } },
-        // { data: { source: 'llp', target: 'llr', weight: 0.25 } },
         { data: { source: 'llp', target: 'lunch', weight: 8 } },
-        { data: { source: 'start', target: 'alex', weight: 102 } },
-        { data: { source: 'alex', target: 'lunch', weight: 0 } },
+        { data: { source: 'start', target: 'alex', weight: 94 } },
+        { data: { source: 'alex', target: 'alexp', weight: 10 } },
+        { data: { source: 'alexp', target: 'lunch', weight: 0 } },
         { data: { source: 'start', target: 'dc', weight: 17 } },
-      ]
+      ],
+  });
+
+  cy.on('click', 'node', function(evt) {
+    const id = '#' + this.id();
+    const cls = cy.nodes(id)[0]._private.classes;
+    if (cls.has('highlighted')) {
+      cy.nodes(id).removeClass('highlighted');
+    } else {
+      cy.nodes(id).addClass('highlighted');
     }
   });
-  cy.layout({
-    name:'breadthfirst',
-    fit: true, // whether to fit the viewport to the graph
-    directed: true, // whether the tree is directed downwards (or edges can point in any direction if false)
-    padding: 20, // padding on fit
-    circle: false, // put depths in concentric circles if true, put depths top down if false
-    grid: false, // whether to create an even grid into which the DAG is placed (circle:false only)
-    spacingFactor: 1.3, // positive spacing factor, larger => more space between nodes (N.B. n/a if causes overlap)
-    avoidOverlap: true, // prevents node overlap, may overflow boundingBox if not enough space
-    nodeDimensionsIncludeLabels: false, // Excludes the label when calculating node bounding boxes for the layout algorithm
-    roots: '#start', // the roots of the trees
-    maximal: true, // whether to shift nodes down their natural BFS depths in order to avoid upwards edges (DAGS only)
-    // boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
-    // animate: false, // whether to transition the node positions
-    // animationDuration: 500, // duration of animation in ms if enabled
-    // animationEasing: undefined, // easing of animation if enabled,
-    // animateFilter: function ( node, i ){ return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
-    // ready: undefined, // callback on layoutready
-    // stop: undefined, // callback on layoutstop
-    // transform: function (node, position ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts
-  }).run();
+  cy.on('click', 'edge', function(evt) {
+    const id = '#' + this.id();
+    const cls = cy.edges(id)[0]._private.classes;
+    if (cls.has('highlighted')) {
+      cy.edges(id).removeClass('highlighted');
+    } else {
+      cy.edges(id).addClass('highlighted');
+    }
+  });
 
-  // applyAlgorithmFromSelect('astar')
-  // cy.elements().bfs.bind(cy.elements())
-    const dijkstra = cy.elements().dijkstra('#start');
-  const pathToC = dijkstra.pathTo( cy.$('#lunch') );
-  const distToC = dijkstra.distanceTo( cy.$('#lunch') );
-  console.log({pathToC, distToC});
+  function clearMarks() {
+    cy.$().removeClass('highlighted start end');
+  }
 
+  $('#clear').click(clearMarks);
+  $('#bfs').click(() => {
+    clearMarks();
+    applyAlgorithmFromSelect('bfs');
+  });
+  $('#dfs').click(() => {
+    clearMarks();
+    applyAlgorithmFromSelect('dfs');
+  });
 });
